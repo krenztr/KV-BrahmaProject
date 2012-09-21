@@ -9,6 +9,7 @@ public class PluginManager {
 	
 	public int startPlugin(IBrahmaPlugin plugin)
 	{
+		//TODO: Dependencies (load all, from root to leaves, then start, root to leave)
 		plugin.load(coreApp);
 		plugin.start();	
 		return 0;
