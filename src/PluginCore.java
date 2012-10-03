@@ -21,23 +21,23 @@ import javax.swing.filechooser.FileFilter;
 
 public class PluginCore {
 	private JFrame frame;
-	//private JPanel contentPane;
-	//private JLabel bottomLabel;
 	private JList sideList;
 	private DefaultListModel listModel;
 	private JButton addButton;
 	private JButton removeButton;
 	private JPanel buttonPanel;
 	private JFileChooser fileChooser;
-	//private JPanel centerEnvelope;
+	private PluginManager pluginManager;
+	
+	private final String XMLVAL = "brahma.xml";
 	
 	public PluginCore()
 	{
+		pluginManager = new PluginManager(XMLVAL,this);
 		fileChooser = new JFileChooser();
 		fileChooser.setFileFilter(new FileFilter(){		
 			@Override
 			public String getDescription() {
-				// TODO Auto-generated method stub
 				return ".jar files";
 			}
 
@@ -78,7 +78,12 @@ public class PluginCore {
 				int returnVal = fileChooser.showOpenDialog(null);
 				if(returnVal == JFileChooser.APPROVE_OPTION)
 				{
-					//TODO: Plugin manager: Add jar file and load
+					try {
+						pluginManager.addPlugin(fileChooser.getSelectedFile());
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
 			}
 			
@@ -108,5 +113,10 @@ public class PluginCore {
 	public void start()
 	{
 		
+	}
+
+	public void addPlugin(String className) {
+		this.listModel.addElement(className);
+		this.sideList.repaint();
 	}
 }
