@@ -21,8 +21,8 @@ import javax.swing.filechooser.FileFilter;
 
 public class PluginCore {
 	private JFrame frame;
-	private JList sideList;
-	private DefaultListModel listModel;
+	private JList<String> sideList;
+	private DefaultListModel<String> listModel;
 	private JButton addButton;
 	private JButton removeButton;
 	private JPanel buttonPanel;
@@ -33,7 +33,7 @@ public class PluginCore {
 	
 	public PluginCore()
 	{
-		pluginManager = new PluginManager(XMLVAL,this);
+		
 		fileChooser = new JFileChooser();
 		fileChooser.setFileFilter(new FileFilter(){		
 			@Override
@@ -48,17 +48,18 @@ public class PluginCore {
 			
 		});
 		
-		JFrame frame = new JFrame("Brahma Plugin Handler");
+		this.frame = new JFrame("Brahma Plugin Handler");
 		frame.setSize(new Dimension(500, 300));
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		pluginManager = new PluginManager(XMLVAL,this);
 		
 		//JPanel contentPane = (JPanel)frame.getContentPane();
 		//contentPane.setPreferredSize(new Dimension(700, 500));
 		//
 		//JLabel bottomLabel = new JLabel("No plugins registered yet!");
 		
-		listModel = new DefaultListModel();
-		sideList = new JList(listModel);
+		listModel = new DefaultListModel<String>();
+		sideList = new JList<String>(listModel);
 		sideList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		sideList.setLayoutOrientation(JList.VERTICAL);
 		JScrollPane scrollPane = new JScrollPane(sideList);
@@ -81,7 +82,6 @@ public class PluginCore {
 					try {
 						pluginManager.addPlugin(fileChooser.getSelectedFile());
 					} catch (Exception e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				}
@@ -91,12 +91,12 @@ public class PluginCore {
 		removeButton.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				int index = sideList.getSelectedIndex();
-				String name = (String)sideList.getSelectedValue();
-				if(index != -1)
+				String name = sideList.getSelectedValue();
+				if(sideList.getSelectedIndex() != -1)
 				{
-					sideList.remove(index);
-					//TODO: PluginManager.removeXML
+					pluginManager.removePlugin(name);
+					listModel.removeElement(name);
+					sideList.repaint();
 				}
 			}
 			
@@ -110,11 +110,6 @@ public class PluginCore {
 		frame.setVisible(true);
 	}
 	
-	public void start()
-	{
-		
-	}
-
 	public void addPlugin(String className) {
 		this.listModel.addElement(className);
 		this.sideList.repaint();

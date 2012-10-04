@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -30,6 +31,7 @@ public class PluginManager {
 	private ArrayList<String> pluginNames;
 	private String filepath;
 	private ArrayList<File> pluginBundles;
+	private HashMap<String, IBrahmaPlugin> plugins;
 
 	public PluginManager(String filepath, PluginCore pluginCore) {
 		this.filepath = filepath;
@@ -37,6 +39,7 @@ public class PluginManager {
 		this.pluginCore = pluginCore;
 		this.pluginNames = new ArrayList<String>();
 		this.pluginBundles = new ArrayList<File>();
+		this.plugins = new HashMap<String, IBrahmaPlugin>();
 
 		if (xmlDoc.exists()) {
 			loadXML(filepath);
@@ -117,26 +120,72 @@ public class PluginManager {
 		transformer.transform(source, result);
 	}
 
-	public void addPluginToXML(String className, String bundlePath, String[] dependencies) {
+	public void addPluginToXML(String className, String bundlePath,
+			String[] dependencies) {
 		try {
 			Document doc = buildDoc(this.filepath);
-			//TODO: Add to XML File
+
+			Node rootNode = doc.getFirstChild();
+			NodeList pluginNodes = rootNode.getChildNodes();
+			// Check for pre-existing node
+			Boolean added = false;
+			for (int i = 0; i < pluginNodes.getLength(); i++) {
+				Node currentNode = pluginNodes.item(i);
+				if (currentNode.getAttributes().getNamedItem("name")
+						.getTextContent() == className) {
+					added = true;
+				}
+			}
+
+			if (!added) {
+				Element pluginNode = doc.createElement("Plugin");
+				pluginNode.setAttribute("name", className);
+				pluginNode.setAttribute("path", bundlePath);
+				rootNode.appendChild(pluginNode);
+				Element dependentNode = doc.createElement("Dependent");
+				dependentNode.setNodeValue(className);
+				for (String parent : dependencies) {
+					addDependentNodes(pluginNodes, dependentNode, parent);
+				}
+
+			}
+
 			writeToXML(this.filepath, doc);
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	public void addDependent(String parentName, String childName) {
-		// TODO
+	private void addDependentNodes(NodeList pluginNodes, Element dependentNode,
+			String parentName) {
+		for (int j = 0; j < pluginNodes.getLength(); j++) {
+			Node possiblePar = pluginNodes.item(j);
+			if (possiblePar.getAttributes().getNamedItem("name")
+					.getTextContent() == parentName) {
+				possiblePar.appendChild(dependentNode);
+				break;
+			}
+		}
 	}
 
-	public void removeDependent(String parentName, String childName) {
-		// TODO
+	public void removeDependentNodes (NodeList pluginNodes, String dependentName) {
+		
+		for (int j = 0; j < pluginNodes.getLength(); j++) {
+			Node pluginNode = pluginNodes.item(j);
+			NodeList dependents = pluginNode.getChildNodes();
+			for (int i = 0; i < dependents.getLength(); i++) {
+				if(dependents.item(i).getNodeValue() == dependentName){
+					pluginNode.removeChild(dependents.item(i));
+					break;
+				}
+			}
+		}
+	
 	}
 
 	public void startPlugin(IBrahmaPlugin pluginClass) {
-		 pluginClass.start();
+		pluginClass.start();
 	}
 
 	public void stopPlugin(IBrahmaPlugin pluginClass) {
@@ -144,9 +193,6 @@ public class PluginManager {
 	}
 
 	public void addPlugin(File jarBundle) throws Exception {
-		// TODO: Check plugin dependicies, then add to list and update XML.
-		// Finally, start plugin.
-
 		// Get the manifest file in the jar file
 		JarFile jarFile = new JarFile(jarBundle);
 		String bundlePath = jarBundle.getPath();
@@ -166,17 +212,19 @@ public class PluginManager {
 		}
 		if (supported) {
 			URL[] urls = new URL[] { new URL(bundlePath) };
+			@SuppressWarnings("resource")
 			ClassLoader classLoader = new URLClassLoader(urls);
 			Class<?> pluginClass = classLoader.loadClass(className);
-			IBrahmaPlugin plugin = (IBrahmaPlugin) pluginClass.cast(IBrahmaPlugin.class);
+			IBrahmaPlugin plugin = (IBrahmaPlugin) pluginClass.newInstance();
+			plugins.put(className, plugin);
 			if (verifyImplementation(pluginClass)) {
 				pluginCore.addPlugin(className);
 				addPluginToXML(className, bundlePath, dependencies);
-				pluginCore.start();
 				startPlugin(plugin);
 			}
-
+			
 		}
+		jarFile.close();
 
 	}
 
@@ -193,8 +241,34 @@ public class PluginManager {
 		return implemented;
 	}
 
-	public void removePlugin() {
-		// TODO: Check dependents first. Then stop plugin, then remove plugin
-		// from list and XML.
+	public void removePlugin(String name) {
+		IBrahmaPlugin plugin = plugins.get(name);
+		stopPlugin(plugin);
+		plugins.remove(name);
+		plugin = null;
+		try {
+			Document doc = buildDoc(this.filepath);
+
+			Node rootNode = doc.getFirstChild();
+			NodeList pluginNodes = rootNode.getChildNodes();
+			Node pluginNode = null;
+			for(int i = 0; i < pluginNodes.getLength(); i++){
+				if(pluginNodes.item(i).getAttributes().getNamedItem("name").getTextContent() == name){
+					pluginNode = pluginNodes.item(i);
+				}
+			}
+			NodeList dependentNodes = pluginNode.getChildNodes();
+			for(int i = 0; i < dependentNodes.getLength(); i++){
+				removePlugin(dependentNodes.item(i).getNodeValue());
+			}
+			
+			removeDependentNodes(pluginNodes, name);
+			
+			rootNode.removeChild(pluginNode);
+			
+			writeToXML(this.filepath, doc);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }
