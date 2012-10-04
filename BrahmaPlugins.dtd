@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+  <!ELEMENT BrahmaPlugins (Plugin)>
+
+	<!ELEMENT Plugin (Dependent*)>
+	<!ATTLIST Plugin 
+				name (#PCDATA) #REQUIRED
+				path (#PCDATA) #REQUIRED>
+				
+		<!ELEMENT Dependent (#PCDATA)>
