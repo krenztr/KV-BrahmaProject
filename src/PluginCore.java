@@ -119,4 +119,8 @@ public class PluginCore {
 		this.listModel.addElement(className);
 		this.sideList.repaint();
 	}
+
+	public boolean hasPlugin(String s) {
+		return this.listModel.contains(s);
+	}
 }
