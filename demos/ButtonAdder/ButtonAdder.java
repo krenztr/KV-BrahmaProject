@@ -1,3 +1,5 @@
+package ButtonAdder;
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -36,6 +38,22 @@ public class ButtonAdder implements IBrahmaPlugin
 	public void stop() {
 		frame.remove(button);
 		
+	}
+
+	@Override
+	public void setFrame(JFrame frame) {
+		final JFrame frameF = frame;
+		this.frame = frame;
+		this.button = new JButton("Button");
+		this.button.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				JOptionPane.showMessageDialog(frameF,
+					    "The button has been clicked.");
+			}
+			
+		});
 	}
 
 }
