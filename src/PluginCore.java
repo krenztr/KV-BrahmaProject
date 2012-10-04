@@ -20,7 +20,7 @@ import javax.swing.filechooser.FileFilter;
 
 
 public class PluginCore {
-	private JFrame frame;
+	JFrame frame;
 	private JList<String> sideList;
 	private DefaultListModel<String> listModel;
 	private JButton addButton;

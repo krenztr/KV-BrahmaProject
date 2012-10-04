@@ -1,0 +1,3 @@
+Manifest-Version: 1.0
+Plugin-Class: //This is the class which implements our inteface
+Plugin-Dependencies: //These are other plugins upon which this depends
