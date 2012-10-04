@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -8,6 +9,7 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import javax.swing.JFrame;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -169,19 +171,19 @@ public class PluginManager {
 		}
 	}
 
-	public void removeDependentNodes (NodeList pluginNodes, String dependentName) {
-		
+	public void removeDependentNodes(NodeList pluginNodes, String dependentName) {
+
 		for (int j = 0; j < pluginNodes.getLength(); j++) {
 			Node pluginNode = pluginNodes.item(j);
 			NodeList dependents = pluginNode.getChildNodes();
 			for (int i = 0; i < dependents.getLength(); i++) {
-				if(dependents.item(i).getNodeValue() == dependentName){
+				if (dependents.item(i).getNodeValue() == dependentName) {
 					pluginNode.removeChild(dependents.item(i));
 					break;
 				}
 			}
 		}
-	
+
 	}
 
 	public void startPlugin(IBrahmaPlugin pluginClass) {
@@ -201,28 +203,39 @@ public class PluginManager {
 		Attributes mainAttribs = mf.getMainAttributes();
 		// Get hold of the Plugin-Class attribute and load the class
 		String className = mainAttribs.getValue("Plugin-Class");
-		String[] dependencies = mainAttribs.getValue("Plugin-Dependencies")
-				.split(",");
+		String dependStr = mainAttribs.getValue("Plugin-Dependencies");
+
 		Boolean supported = true;
-		for (String s : dependencies) {
-			if (!this.pluginCore.hasPlugin(s)) {
-				supported = false;
-				break;
+		String[] dependencies = null;
+		if (dependStr != null) {
+			if (dependStr.contains(",")) {
+				dependencies = dependStr.split(",");
+			} else {
+				dependencies = new String[] { dependStr };
+			}
+			for (String s : dependencies) {
+				if (!s.isEmpty() && !this.pluginCore.hasPlugin(s)) {
+					supported = false;
+					break;
+				}
 			}
 		}
 		if (supported) {
-			URL[] urls = new URL[] { new URL(bundlePath) };
+			URL jarURL = new URL("jar", "", "file:" + jarBundle.getAbsolutePath()+"!/");
+			URL[] urls = new URL[] { jarURL };
 			@SuppressWarnings("resource")
 			ClassLoader classLoader = new URLClassLoader(urls);
 			Class<?> pluginClass = classLoader.loadClass(className);
 			IBrahmaPlugin plugin = (IBrahmaPlugin) pluginClass.newInstance();
+			plugin.setFrame(this.pluginCore.frame);
+			//Constructor<IBrahmaPlugin> construct = (Constructor<IBrahmaPlugin>) pluginClass.getConstructor(JFrame.class);
 			plugins.put(className, plugin);
 			if (verifyImplementation(pluginClass)) {
 				pluginCore.addPlugin(className);
 				addPluginToXML(className, bundlePath, dependencies);
 				startPlugin(plugin);
 			}
-			
+
 		}
 		jarFile.close();
 
@@ -252,20 +265,21 @@ public class PluginManager {
 			Node rootNode = doc.getFirstChild();
 			NodeList pluginNodes = rootNode.getChildNodes();
 			Node pluginNode = null;
-			for(int i = 0; i < pluginNodes.getLength(); i++){
-				if(pluginNodes.item(i).getAttributes().getNamedItem("name").getTextContent() == name){
+			for (int i = 0; i < pluginNodes.getLength(); i++) {
+				if (pluginNodes.item(i).getAttributes().getNamedItem("name")
+						.getTextContent() == name) {
 					pluginNode = pluginNodes.item(i);
 				}
 			}
 			NodeList dependentNodes = pluginNode.getChildNodes();
-			for(int i = 0; i < dependentNodes.getLength(); i++){
+			for (int i = 0; i < dependentNodes.getLength(); i++) {
 				removePlugin(dependentNodes.item(i).getNodeValue());
 			}
-			
+
 			removeDependentNodes(pluginNodes, name);
-			
+
 			rootNode.removeChild(pluginNode);
-			
+
 			writeToXML(this.filepath, doc);
 		} catch (Exception e) {
 			e.printStackTrace();
