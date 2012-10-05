@@ -1,4 +1,3 @@
 Manifest-Version: 1.0
-Plugin-Class: BackgroundAndTitle
+Plugin-Class: BackgroundAndTitle.BackgroundAndTitle
 Plugin-Dependencies: 
-
